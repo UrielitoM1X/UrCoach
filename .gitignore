@@ -1,0 +1,20 @@
+# Datos locales de Docker y Base de datos
+.docker/
+postgres_data/
+redis_data/
+
+# Entornos virtuales y caché de Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Archivos del sistema y variables de entorno
+.env
+.DS_Store
+Thumbs.db
+
+# Videos de prueba y modelos pesados (IA)
+/ai-engine/videos_test/
+/ai-engine/models//*.onnx
+/ai-engine/models//*.pkl
