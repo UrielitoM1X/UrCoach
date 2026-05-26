@@ -1,0 +1,12 @@
+services:
+  backend:
+    # Docker busca el Dockerfile en ./backend
+    build: ./backend
+    container_name: gym_backend
+    # Mapea el puerto 8000 del dispositivo al puerto 
+    # 8000 del contenedor
+    ports:
+      - "8000:8000"
+    # Sincroniza la carpeta local con el contenedor
+    volumes:
+      - ./backend:/app
