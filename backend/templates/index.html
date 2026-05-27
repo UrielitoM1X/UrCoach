@@ -7,19 +7,20 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+
     <script type="module">
-        import { Application, Controller } from "https://unpkg.com/@hotwired/stimulus/dist/stimulus.js"
+        import { Application } from "https://unpkg.com/@hotwired/stimulus/dist/stimulus.js"
+        
+        // Inicializamos Stimulus una sola vez
         window.Stimulus = Application.start()
+        
+        // Importamos y registramos tu controlador de la webcam
+        import WebcamController from "/static/webcam_controller.js"
+        Stimulus.register("webcam", WebcamController)
     </script>
-
-    <script type="module">
-    import { Application } from "https://unpkg.com/@hotwired/stimulus/dist/stimulus.js"
-    window.Stimulus = Application.start()
-
-    // Registramos tu nuevo controlador de la webcam
-    import WebcamController from "/static/webcam_controller.js"
-    Stimulus.register("webcam", WebcamController)
-</script>
 </head>
 <body class="bg-neutral-900 text-white min-h-screen flex flex-col items-center justify-center p-6">
 
@@ -33,18 +34,19 @@
         </p>
 
         <div data-controller="webcam" class="bg-neutral-800 p-4 rounded-2xl border border-neutral-700 shadow-xl inline-block">
-
+    
     <div class="relative w-[640px] h-[480px] bg-black rounded-lg overflow-hidden flex items-center justify-center">
-        <span class="absolute text-neutral-500">Cámara apagada</span>
-
-        <video data-webcam-target="video" autoplay playsinline class="w-full h-full object-cover scale-x-[-1]"></video>
+        <span class="absolute text-neutral-500">Cargando IA...</span>
+        
+        <video data-webcam-target="video" autoplay playsinline class="absolute top-0 left-0 w-full h-full object-cover scale-x-[-1]"></video>
+        
+        <canvas data-webcam-target="canvas" width="640" height="480" class="absolute top-0 left-0 w-full h-full object-cover scale-x-[-1] z-10"></canvas>
     </div>
-
+    
     <div class="mt-4 flex justify-center space-x-4">
         <button data-action="click->webcam#encender" class="bg-emerald-500 hover:bg-emerald-600 text-neutral-950 font-bold py-2 px-6 rounded-lg transition">
-            Encender Cámara
+            Encender Cámara e IA
         </button>
-
         <button data-action="click->webcam#apagar" class="bg-neutral-700 hover:bg-neutral-600 text-white font-bold py-2 px-6 rounded-lg transition">
             Apagar
         </button>
