@@ -3,84 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UrCoach - Detector de Técnica</title>
+    <title>UrCoach — Analizador Bio-Mecánico</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/@hotwired/turbo@7.3.0/dist/turbo.es2017-umd.js"></script>
     
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
 
     <script type="module">
         import { Application } from "https://unpkg.com/@hotwired/stimulus/dist/stimulus.js"
-        
-        // Inicializamos Stimulus una sola vez
         window.Stimulus = Application.start()
         
-        // Importamos y registramos tu controlador de la webcam
         import WebcamController from "/static/webcam_controller.js"
         Stimulus.register("webcam", WebcamController)
     </script>
 </head>
-<body class="bg-neutral-900 text-white min-h-screen flex flex-col items-center justify-center p-6">
+<body class="bg-zinc-50 text-zinc-900 min-h-screen flex flex-col items-center justify-center p-6 font-sans">
 
-    <main class="max-w-4xl w-full text-center space-y-6">
-        <h1 class="text-4xl font-extrabold tracking-tight text-emerald-400">
-            UrCoach <span class="text-neutral-400 text-2xl font-light">| Analizador Bio-Mecánico</span>
-        </h1>
+    <main data-controller="webcam" class="max-w-5xl w-full space-y-6 flex flex-col items-center">
         
-        <p class="text-neutral-400 max-w-md mx-auto">
-            Configuración inicial de la interfaz de cámara web mediante Hotwire Stimulus.
-        </p>
+        <div class="text-center">
+            <h1 class="text-3xl font-black tracking-tight text-zinc-900">
+                UrCoach <span class="text-zinc-400 text-xl font-light">/ LAB</span>
+            </h1>
+            <p class="text-zinc-500 text-sm mt-1">Sube archivos o usa tu cámara para realizar diagnósticos biomecánicos.</p>
+        </div>
 
-        <div data-controller="webcam" class="bg-neutral-800 p-4 rounded-2xl border border-neutral-700 shadow-xl inline-block">
-    
-    <div class="relative w-[640px] h-[480px] bg-black rounded-lg overflow-hidden flex items-center justify-center">
-        <span class="absolute text-neutral-500">Cargando IA...</span>
-        
-        <video data-webcam-target="video" autoplay playsinline class="absolute top-0 left-0 w-full h-full object-cover scale-x-[-1]"></video>
-        
-        <canvas data-webcam-target="canvas" width="640" height="480" class="absolute top-0 left-0 w-full h-full object-cover scale-x-[-1] z-10"></canvas>
-    </div>
-    
-    <div class="mt-4 flex justify-center space-x-4">
-        <button data-action="click->webcam#encender" class="bg-emerald-500 hover:bg-emerald-600 text-neutral-950 font-bold py-2 px-6 rounded-lg transition">
-            Encender Cámara e IA
-        </button>
-        <button data-action="click->webcam#apagar" class="bg-neutral-700 hover:bg-neutral-600 text-white font-bold py-2 px-6 rounded-lg transition">
-            Apagar
-        </button>
-    </div>
-</div>
+        <div class="flex bg-zinc-200/60 p-1 rounded-xl w-full max-w-md border border-zinc-200">
+            <button id="tab-tecnica" class="flex-1 py-2 text-sm font-bold bg-white text-zinc-950 rounded-lg shadow-sm transition">
+                🏋️‍♂️ Módulo de Técnica
+            </button>
+            <button id="tab-palancas" class="flex-1 py-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 transition">
+                📐 Módulo de Palancas
+            </button>
+        </div>
 
-<div data-controller="webcam" class="bg-neutral-800 p-4 rounded-2xl border border-neutral-700 shadow-xl inline-block">
+        <div class="flex flex-col md:flex-row gap-6 items-stretch">
             
-            <div class="flex justify-between mb-3 px-2 text-sm font-semibold">
-                <span class="text-zinc-400">Reps Válidas: <span id="contador-reps" class="text-emerald-400 text-lg">0</span></span>
-                <span class="text-zinc-400">Estado: <span id="estado-ia" class="text-zinc-400">Inactivo</span></span>
+            <div class="bg-white p-4 rounded-2xl border border-zinc-200 shadow-sm flex flex-col">
+                <div class="flex justify-between mb-3 px-1 text-xs font-mono tracking-wider uppercase text-zinc-400">
+                    <div id="meta-tecnica">Reps Válidas: <span id="contador-reps" class="text-zinc-950 font-bold text-sm">0</span></div>
+                    <div id="meta-palancas" class="hidden">Modo: Antropometría estática</div>
+                    <div>Origen: <span id="origen-fuente" class="text-zinc-950 font-bold">Ninguno</span></div>
+                </div>
+
+                <div class="relative w-[640px] h-[480px] bg-zinc-100 rounded-xl overflow-hidden flex items-center justify-center border border-zinc-200">
+                    <span class="absolute text-zinc-400 font-mono text-xs z-0">Esperando señal multimedia...</span>
+                    
+                    <video data-webcam-target="video" autoplay playsinline class="absolute top-0 left-0 w-full h-full object-cover scale-x-[-1] hidden"></video>
+                    <img id="render-image" class="absolute top-0 left-0 w-full h-full object-cover scale-x-[-1] hidden" />
+                    
+                    <canvas data-webcam-target="canvas" width="640" height="480" class="absolute top-0 left-0 w-full h-full object-cover scale-x-[-1] z-10 pointer-events-none"></canvas>
+                </div>
+                
+                <div class="mt-4 flex justify-between items-center">
+                    <span id="estado-ia" class="text-xs font-mono text-zinc-400">ESTADO: INACTIVO</span>
+                    <button data-action="click->webcam#apagar" class="bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold py-2 px-4 rounded-xl transition text-xs border border-zinc-200">
+                        Reiniciar Analizador
+                    </button>
+                </div>
             </div>
 
-            <div class="relative w-[640px] h-[480px] bg-black rounded-lg overflow-hidden flex items-center justify-center">
-                <span class="absolute text-neutral-500">Cargando IA...</span>
-                <video data-webcam-target="video" autoplay playsinline class="absolute top-0 left-0 w-full h-full object-cover scale-x-[-1]"></video>
-                <canvas data-webcam-target="canvas" width="640" height="480" class="absolute top-0 left-0 w-full h-full object-cover scale-x-[-1] z-10"></canvas>
-            </div>
-            
-            <div class="mt-4 flex justify-center space-x-4">
-                <button data-action="click->webcam#encender" class="bg-emerald-500 hover:bg-emerald-600 text-neutral-950 font-bold py-2 px-6 rounded-lg transition">
-                    Encender Cámara e IA
-                </button>
-                <button data-action="click->webcam#apagar" class="bg-neutral-700 hover:bg-neutral-600 text-white font-bold py-2 px-6 rounded-lg transition">
-                    Terminar Serie y Guardar
+            <div class="w-full md:w-64 bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm flex flex-col justify-between">
+                <div class="space-y-6">
+                    <h2 class="text-xs font-bold font-mono tracking-wider text-zinc-400 uppercase">Fuentes de Entrada</h2>
+                    
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-zinc-700 block">Captura Directa</label>
+                        <button data-action="click->webcam#encenderCamara" class="w-full bg-zinc-950 hover:bg-zinc-800 text-white font-bold py-2.5 px-4 rounded-xl transition text-sm text-center shadow-sm block">
+                            🎥 Usar WebCam en vivo
+                        </button>
+                    </div>
+
+                    <hr class="border-zinc-200" />
+
+                    <div class="space-y-3">
+                        <label class="text-xs font-bold text-zinc-700 block">Cargar Archivo Local</label>
+                        
+                        <input type="file" id="input-archivo" data-action="change->webcam#procesarArchivo" class="hidden" accept="image/*,video/*" />
+                        
+                        <button id="btn-subir-video" onclick="document.getElementById('input-archivo').click()" class="w-full bg-white hover:bg-zinc-50 text-zinc-800 font-medium py-2.5 px-4 rounded-xl transition text-sm border border-zinc-200 shadow-sm text-left flex items-center justify-between">
+                            <span>📁 Cargar Video</span>
+                            <span class="text-xs text-zinc-400 font-mono">.mp4 / .mov</span>
+                        </button>
+
+                        <button id="btn-subir-imagen" onclick="document.getElementById('input-archivo').click()" class="hidden w-full bg-white hover:bg-zinc-50 text-zinc-800 font-medium py-2.5 px-4 rounded-xl transition text-sm border border-zinc-200 shadow-sm text-left flex items-center justify-between">
+                            <span>🖼️ Cargar Imagen</span>
+                            <span class="text-xs text-zinc-400 font-mono">.jpg / .png</span>
+                        </button>
+                    </div>
+                </div>
+
+                <button data-action="click->webcam#enviarDatosAlServidor" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl transition text-sm shadow-sm mt-6 md:mt-0">
+                    💾 Sincronizar Reporte
                 </button>
             </div>
         </div>
 
-        <div id="historial" class="max-w-md mx-auto">
-            </div>
+        <div id="historial" class="w-full max-w-md"></div>
     </main>
 
+    <script>
+        const btnTecnica = document.getElementById('tab-tecnica');
+        const btnPalancas = document.getElementById('tab-palancas');
+        const metaTecnica = document.getElementById('meta-tecnica');
+        const metaPalancas = document.getElementById('meta-palancas');
+        const btnSubirVideo = document.getElementById('btn-subir-video');
+        const btnSubirImagen = document.getElementById('btn-subir-imagen');
+        const inputArchivo = document.getElementById('input-archivo');
+
+        window.currentTab = 'tecnica';
+
+        btnTecnica.addEventListener('click', () => {
+            window.currentTab = 'tecnica';
+            btnTecnica.className = "flex-1 py-2 text-sm font-bold bg-white text-zinc-950 rounded-lg shadow-sm transition";
+            btnPalancas.className = "flex-1 py-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 transition";
+            metaTecnica.classList.remove('hidden');
+            metaPalancas.classList.add('hidden');
+            btnSubirVideo.classList.remove('hidden');
+            btnSubirImagen.classList.add('hidden');
+            inputArchivo.setAttribute('accept', 'video/*');
+        });
+
+        btnPalancas.addEventListener('click', () => {
+            window.currentTab = 'palancas';
+            btnPalancas.className = "flex-1 py-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 transition";
+            btnTecnica.className = "flex-1 py-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 transition";
+            btnPalancas.classList.add('bg-white', 'text-zinc-950', 'rounded-lg', 'shadow-sm');
+            metaPalancas.classList.remove('hidden');
+            metaTecnica.classList.add('hidden');
+            btnSubirImagen.classList.remove('hidden');
+            btnSubirVideo.classList.add('hidden');
+            inputArchivo.setAttribute('accept', 'image/*');
+        });
+    </script>
 </body>
 </html>
