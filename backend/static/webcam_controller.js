@@ -5,9 +5,18 @@ export default class extends Controller {
     static targets = [ "video", "canvas" ]
 
     connect() {
-        console.log("Controlador cargado. Inicializando MediaPipe Pose...")
-        this.ctx = this.canvasTarget.getContext("2d")
-        this.initPose()
+        console.log("Controlador de Biomecánica Inicializado.");
+        this.ctx = this.canvasTarget.getContext("2d");
+        
+        // Variables para controlar el conteo de repeticiones de sentadillas
+        this.contadorReps = 0;
+        this.enSentadilla = false; // Bandera para saber si está abajo
+        
+        // Almacenes de datos biomecánicos
+        this.ultimoRatio = 0.0;
+        this.tipoPalanca = "No detectado";
+
+        this.initPose();
     }
 
     // Configura el modelo de MediaPipe
@@ -63,82 +72,108 @@ export default class extends Controller {
     // Esta función dibuja los puntos y líneas en el Canvas
     dibujarEsqueleto(results) {
         this.ctx.clearRect(0, 0, this.canvasTarget.width, this.canvasTarget.height);
-
         if (!results.poseLandmarks) return;
 
-        // Dibujar el esqueleto de MediaPipe primero
         drawConnectors(this.ctx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#10B981', lineWidth: 4 });
         drawLandmarks(this.ctx, results.poseLandmarks, { color: '#3B82F6', lineWidth: 2, radius: 5 });
 
-        // --- MÓDULO BIOMECÁNICO ---
         const landmarks = results.poseLandmarks;
-
-        // Usaremos el perfil izquierdo del usuario (puedes cambiarlo al derecho si gustas)
         const hombro = landmarks[11];
         const cadera = landmarks[23];
         const rodilla = landmarks[25];
         const tobillo = landmarks[27];
 
-        // Verificar que los puntos sean visibles en pantalla (visibilidad > 50%)
         if (hombro.visibility > 0.5 && cadera.visibility > 0.5 && rodilla.visibility > 0.5 && tobillo.visibility > 0.5) {
             
-            // 1. CÁLCULO DE PALANCAS (Ratios relativos)
             let longitudTorso = this.calcularDistancia(hombro, cadera);
             let longitudFemur = this.calcularDistancia(cadera, rodilla);
-            
-            let ratioFemurTorso = longitudFemur / longitudTorso;
+            this.ultimoRatio = longitudFemur / longitudTorso;
+            this.tipoPalanca = this.ultimoRatio > 0.85 ? "Femur Largo" : "Femur Corto";
 
-            // 2. CÁLCULO DE TÉCNICA (Ángulo de la rodilla)
             let anguloRodilla = this.calcularAngulo(cadera, rodilla, tobillo);
 
-            // 3. PINTAR INFORMACIÓN EN EL CANVAS
-            this.ctx.fillStyle = "#FFFFFF";
-            this.ctx.font = "bold 16px sans-serif";
+            // --- LÓGICA DE CONTEO DE REPETICIONES VÁLIDAS ---
+            // Si el ángulo baja de 100 grados y no estábamos registrados abajo, entra a la zona de repetición
+            if (anguloRodilla <= 100 && !this.enSentadilla) {
+                this.enSentadilla = true;
+                document.getElementById("estado-ia").innerText = "Abajo (Zona Válida)";
+                document.getElementById("estado-ia").className = "text-emerald-400";
+            }
             
-            // Mostrar Ángulo de la Rodilla
-            // Ajustamos las coordenadas para que se pinte cerca de la rodilla real del usuario
-            let textX = (1 - rodilla.x) * this.canvasTarget.width + 20; // Invertido por el espejo
-            let textY = rodilla.y * this.canvasTarget.height;
-            
-            this.ctx.fillText(`${Math.round(anguloRodilla)}°`, textX, textY);
-
-            // Alerta visual de técnica (Sentadilla profunda / Romper paralelo)
-            if (anguloRodilla <= 90) {
-                this.ctx.fillStyle = "#10B981"; // Verde si rompe paralelo
-                this.ctx.fillText("¡BUENA PROFUNDIDAD!", 20, 40);
-            } else {
-                this.ctx.fillStyle = "#EF4444"; // Rojo si está arriba
-                this.ctx.fillText("BAJA MÁS", 20, 40);
+            // Si vuelve a subir de 150 grados (pierna casi estirada) estando abajo, cuenta la repetición
+            if (anguloRodilla >= 150 && this.enSentadilla) {
+                this.contadorReps++;
+                this.enSentadilla = false;
+                document.getElementById("contador-reps").innerText = this.contadorReps;
+                document.getElementById("estado-ia").innerText = "¡Repetición Completada!";
+                document.getElementById("estado-ia").className = "text-blue-400";
             }
 
-            // Mostrar diagnóstico de palancas básico en la esquina
-            this.ctx.fillStyle = "#9CA3AF";
-            this.ctx.font = "14px sans-serif";
-            this.ctx.fillText(`Ratio Fémur/Torso: ${ratioFemurTorso.toFixed(2)}`, 20, 70);
-            
-            if (ratioFemurTorso > 0.85) {
-                this.ctx.fillStyle = "#F59E0B"; // Ámbar
-                this.ctx.fillText("Palancas: Fémur Largo (Sentadilla Demandante)", 20, 90);
-            } else {
-                this.ctx.fillStyle = "#34D399"; // Esmeralda claro
-                this.ctx.fillText("Palancas: Fémur Corto (Sentadilla Favorable)", 20, 90);
+            // Pintar textos en Canvas
+            this.ctx.fillStyle = "#FFFFFF";
+            this.ctx.font = "bold 16px sans-serif";
+            let textX = (1 - rodilla.x) * this.canvasTarget.width + 20;
+            let textY = rodilla.y * this.canvasTarget.height;
+            this.ctx.fillText(`${Math.round(anguloRodilla)}°`, textX, textY);
+
+            if (anguloRodilla <= 100) {
+                this.ctx.fillStyle = "#10B981";
+                this.ctx.fillText("¡BUENA PROFUNDIDAD!", 20, 40);
+            } else if (!this.enSentadilla) {
+                this.ctx.fillStyle = "#EF4444";
+                this.ctx.fillText("BAJA MÁS", 20, 40);
             }
         }
     }
 
-    apagar() {
-        this.active = false // Detiene el bucle de predicción
+    async apagar() {
+        this.active = false;
         if (this.stream) {
-            this.stream.getTracks().forEach(track => track.stop())
-            this.videoTarget.srcObject = null
-            // Limpia el canvas al apagar
-            this.ctx.clearRect(0, 0, this.canvasTarget.width, this.canvasTarget.height)
-            console.log("Cámara e IA apagadas")
+            this.stream.getTracks().forEach(track => track.stop());
+            this.videoTarget.srcObject = null;
+            this.ctx.clearRect(0, 0, this.canvasTarget.width, this.canvasTarget.height);
+            document.getElementById("estado-ia").innerText = "Procesando Serie...";
+            
+            // --- ENVIAR LOS DATOS AL BACKEND VIA TURBO STREAM ---
+            await this.enviarDatosAlServidor();
+        }
+    }
+
+    async enviarDatosAlServidor() {
+        // Formateamos los datos como un formulario clásico (lo que FastAPI espera)
+        const formData = new FormData();
+        formData.append("reps", this.contadorReps);
+        formData.append("ratio", this.ultimoRatio.toFixed(2));
+        formData.append("tipo_palanca", this.tipoPalanca);
+
+        try {
+            const response = await fetch("/guardar-entrenamiento", {
+                method: "POST",
+                body: formData,
+                headers: {
+                    // Esta cabecera es crucial para que el navegador entienda que va a recibir un fragmento de Hotwire Turbo
+                    "Accept": "text/vnd.turbo-stream.html"
+                }
+            });
+
+            if (response.ok) {
+                const htmlResponse = await response.text();
+                // Turbo procesa el fragmento HTML y actualiza el DOM automáticamente
+                Turbo.renderStreamMessage(htmlResponse);
+                
+                // Reiniciamos contadores locales para la siguiente serie
+                this.contadorReps = 0;
+                document.getElementById("contador-reps").innerText = "0";
+                document.getElementById("estado-ia").innerText = "Serie Guardada";
+            }
+        } catch (error) {
+            console.error("Error al sincronizar con el servidor:", error);
+            document.getElementById("estado-ia").innerText = "Error de Conexión";
         }
     }
 
     disconnect() {
-        this.apagar()
+        this.apagar();
     }
 
     // 1. Calcula la distancia euclidiana entre dos puntos (Longitud del hueso)

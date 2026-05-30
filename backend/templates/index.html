@@ -6,7 +6,9 @@
     <title>UrCoach - Detector de Técnica</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@hotwired/turbo@7.3.0/dist/turbo.es2017-umd.js"></script>
     
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
@@ -52,6 +54,32 @@
         </button>
     </div>
 </div>
+
+<div data-controller="webcam" class="bg-neutral-800 p-4 rounded-2xl border border-neutral-700 shadow-xl inline-block">
+            
+            <div class="flex justify-between mb-3 px-2 text-sm font-semibold">
+                <span class="text-zinc-400">Reps Válidas: <span id="contador-reps" class="text-emerald-400 text-lg">0</span></span>
+                <span class="text-zinc-400">Estado: <span id="estado-ia" class="text-zinc-400">Inactivo</span></span>
+            </div>
+
+            <div class="relative w-[640px] h-[480px] bg-black rounded-lg overflow-hidden flex items-center justify-center">
+                <span class="absolute text-neutral-500">Cargando IA...</span>
+                <video data-webcam-target="video" autoplay playsinline class="absolute top-0 left-0 w-full h-full object-cover scale-x-[-1]"></video>
+                <canvas data-webcam-target="canvas" width="640" height="480" class="absolute top-0 left-0 w-full h-full object-cover scale-x-[-1] z-10"></canvas>
+            </div>
+            
+            <div class="mt-4 flex justify-center space-x-4">
+                <button data-action="click->webcam#encender" class="bg-emerald-500 hover:bg-emerald-600 text-neutral-950 font-bold py-2 px-6 rounded-lg transition">
+                    Encender Cámara e IA
+                </button>
+                <button data-action="click->webcam#apagar" class="bg-neutral-700 hover:bg-neutral-600 text-white font-bold py-2 px-6 rounded-lg transition">
+                    Terminar Serie y Guardar
+                </button>
+            </div>
+        </div>
+
+        <div id="historial" class="max-w-md mx-auto">
+            </div>
     </main>
 
 </body>
