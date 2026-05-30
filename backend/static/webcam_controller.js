@@ -62,24 +62,68 @@ export default class extends Controller {
 
     // Esta función dibuja los puntos y líneas en el Canvas
     dibujarEsqueleto(results) {
-        // 1. Limpiamos el canvas del frame anterior
-        this.ctx.clearRect(0, 0, this.canvasTarget.width, this.canvasTarget.height)
+        this.ctx.clearRect(0, 0, this.canvasTarget.width, this.canvasTarget.height);
 
-        // Si no hay coordenadas detectadas, no dibuja nada
-        if (!results.poseLandmarks) return
+        if (!results.poseLandmarks) return;
 
-        // 2. Dibujamos las conexiones (Huesos) usando la librería de MediaPipe
-        drawConnectors(this.ctx, results.poseLandmarks, POSE_CONNECTIONS, {
-            color: '#10B981', // Verde esmeralda de Tailwind
-            lineWidth: 4
-        })
+        // Dibujar el esqueleto de MediaPipe primero
+        drawConnectors(this.ctx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#10B981', lineWidth: 4 });
+        drawLandmarks(this.ctx, results.poseLandmarks, { color: '#3B82F6', lineWidth: 2, radius: 5 });
 
-        // 3. Dibujamos los puntos clave (Articulaciones)
-        drawLandmarks(this.ctx, results.poseLandmarks, {
-            color: '#3B82F6', // Azul de Tailwind
-            lineWidth: 2,
-            radius: 5
-        })
+        // --- MÓDULO BIOMECÁNICO ---
+        const landmarks = results.poseLandmarks;
+
+        // Usaremos el perfil izquierdo del usuario (puedes cambiarlo al derecho si gustas)
+        const hombro = landmarks[11];
+        const cadera = landmarks[23];
+        const rodilla = landmarks[25];
+        const tobillo = landmarks[27];
+
+        // Verificar que los puntos sean visibles en pantalla (visibilidad > 50%)
+        if (hombro.visibility > 0.5 && cadera.visibility > 0.5 && rodilla.visibility > 0.5 && tobillo.visibility > 0.5) {
+            
+            // 1. CÁLCULO DE PALANCAS (Ratios relativos)
+            let longitudTorso = this.calcularDistancia(hombro, cadera);
+            let longitudFemur = this.calcularDistancia(cadera, rodilla);
+            
+            let ratioFemurTorso = longitudFemur / longitudTorso;
+
+            // 2. CÁLCULO DE TÉCNICA (Ángulo de la rodilla)
+            let anguloRodilla = this.calcularAngulo(cadera, rodilla, tobillo);
+
+            // 3. PINTAR INFORMACIÓN EN EL CANVAS
+            this.ctx.fillStyle = "#FFFFFF";
+            this.ctx.font = "bold 16px sans-serif";
+            
+            // Mostrar Ángulo de la Rodilla
+            // Ajustamos las coordenadas para que se pinte cerca de la rodilla real del usuario
+            let textX = (1 - rodilla.x) * this.canvasTarget.width + 20; // Invertido por el espejo
+            let textY = rodilla.y * this.canvasTarget.height;
+            
+            this.ctx.fillText(`${Math.round(anguloRodilla)}°`, textX, textY);
+
+            // Alerta visual de técnica (Sentadilla profunda / Romper paralelo)
+            if (anguloRodilla <= 90) {
+                this.ctx.fillStyle = "#10B981"; // Verde si rompe paralelo
+                this.ctx.fillText("¡BUENA PROFUNDIDAD!", 20, 40);
+            } else {
+                this.ctx.fillStyle = "#EF4444"; // Rojo si está arriba
+                this.ctx.fillText("BAJA MÁS", 20, 40);
+            }
+
+            // Mostrar diagnóstico de palancas básico en la esquina
+            this.ctx.fillStyle = "#9CA3AF";
+            this.ctx.font = "14px sans-serif";
+            this.ctx.fillText(`Ratio Fémur/Torso: ${ratioFemurTorso.toFixed(2)}`, 20, 70);
+            
+            if (ratioFemurTorso > 0.85) {
+                this.ctx.fillStyle = "#F59E0B"; // Ámbar
+                this.ctx.fillText("Palancas: Fémur Largo (Sentadilla Demandante)", 20, 90);
+            } else {
+                this.ctx.fillStyle = "#34D399"; // Esmeralda claro
+                this.ctx.fillText("Palancas: Fémur Corto (Sentadilla Favorable)", 20, 90);
+            }
+        }
     }
 
     apagar() {
@@ -95,5 +139,26 @@ export default class extends Controller {
 
     disconnect() {
         this.apagar()
+    }
+
+    // 1. Calcula la distancia euclidiana entre dos puntos (Longitud del hueso)
+    calcularDistancia(p1, p2) {
+        return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+    }
+
+    // 2. Calcula el ángulo interno entre tres puntos (Ej: Cadera -> Rodilla -> Tobillo)
+    calcularAngulo(p1, p2, p3) {
+        // Vectores entre las articulaciones
+        let v1 = { x: p1.x - p2.x, y: p1.y - p2.y };
+        let v2 = { x: p3.x - p2.x, y: p3.y - p2.y };
+
+        // Producto punto y magnitudes
+        let dotProduct = v1.x * v2.x + v1.y * v2.y;
+        let mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
+        let mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
+
+        // Ángulo en radianes y luego a grados
+        let angle = Math.acos(dotProduct / (mag1 * mag2));
+        return angle * (180 / Math.PI);
     }
 }
